@@ -52,7 +52,7 @@ class Pommodoro:
         elif self.current_time == 0:
             dev.set_mode('')
 
-        if self.pause:
+        if self.pause and self.current_time > 0:
             app.after(1000, self._pomm)
         
         elif self.current_time > 0:
