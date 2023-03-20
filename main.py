@@ -28,10 +28,11 @@ def off():
     dev.set_color('noColor')
 
 class Pommodoro:
-    def __init__(self,work_time=1*60, break_time=1*60):
+    def __init__(self,work_time=25*60, break_time=5*60):
         self.work_time  = work_time
         self.break_time = break_time
         self.current_time = work_time
+        self.was_dim    = dev.mode == 'dim'
         self.on_break   = False
         self.pause = False
         self.set_time_label(work_time)
@@ -50,7 +51,10 @@ class Pommodoro:
         elif self.current_time == 15:
             dev.set_mode('fast')
         elif self.current_time == 0:
-            dev.set_mode('')
+            if self.was_dim:
+                dev.set_mode('dim')
+            else:
+                dev.set_mode('')
 
         if self.pause and self.current_time > 0:
             app.after(1000, self._pomm)
@@ -67,10 +71,11 @@ class Pommodoro:
             self.current_time = self.break_time
             app.after(1000, self._pomm)
         else:
-            timer.configure(text="00:00")
-            self.on_break = False
+            self.current_time = self.work_time
+            self.set_time_label(self.work_time)
             dev.rainbow_waterfall()
             dev.set_color('noColor')
+
             
     def set_time_label(self, time: int):
         minutes = time // 60

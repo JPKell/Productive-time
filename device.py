@@ -1,6 +1,11 @@
+import pathlib, os
 import subprocess
 import time
 
+def relative_to_abs_path(rel_path:str) -> str:
+    ''' Returns the absolute path of a relative path. '''
+    current_dir = pathlib.Path(__file__).parent.resolve() # current directory
+    return os.path.join(current_dir, rel_path) 
 
 class Emetum:
 
@@ -23,8 +28,9 @@ class Emetum:
     }
 
     def __init__(self):
-        self.usb_dev = str(subprocess.check_output("./find_dev_file.sh"), 'utf-8').strip()
         self.mode = ''
+        self.usb_dev = str(subprocess.check_output(relative_to_abs_path("find_dev_file.sh")), 'utf-8').strip()
+        self.sh_path = relative_to_abs_path("emetum.sh")
         self.cur_color = 'noColor'
 
     def __del__(self):
@@ -46,7 +52,7 @@ class Emetum:
         # If mod is not in mods, set it to class mode
         mod = self.mods.get(mod, self.mods.get(self.mode,0))
         color = f'\\x{self.colors[color] + mod :02}'
-        subprocess.run(['./emetum.sh', color, self.usb_dev])
+        subprocess.run([self.sh_path, color, self.usb_dev])
 
     def rainbow_waterfall(self):
         for c in ['red','yellow','green','cyan','blue','purple']:
