@@ -68,6 +68,7 @@ class Pommodoro:
             app.after(1000, self._pomm)
         else:
             timer.configure(text="00:00")
+            self.on_break = False
             dev.rainbow_waterfall()
             dev.set_color('noColor')
             
