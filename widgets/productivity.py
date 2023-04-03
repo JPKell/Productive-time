@@ -1,9 +1,9 @@
 from tkinter import StringVar, IntVar
-from tkinter.ttk import Button, Label, OptionMenu, Combobox, Spinbox, LabelFrame, Checkbutton, Frame
+from tkinter.ttk import Button, Label, OptionMenu, Combobox, Spinbox, Labelframe, Checkbutton, Frame
 
 from settings import colors
 
-class Productivity(LabelFrame):
+class Productivity(Labelframe):
     def __init__(self, view):
         super().__init__(view.frame, text='Categories', labelanchor='n')
         self.grid(row=50, column=0, columnspan=10, sticky='nsew', padx=5, pady=(8,8))

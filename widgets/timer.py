@@ -1,5 +1,5 @@
-from tkinter import Tk, IntVar, StringVar, BooleanVar
-from tkinter.ttk import Frame, Button, Label, Style, Entry, OptionMenu
+from tkinter import StringVar, BooleanVar
+from tkinter.ttk import Button, Label, OptionMenu
 
 class Timer:
     def __init__(self, view, row:int):
@@ -11,9 +11,7 @@ class Timer:
         self.id = 0
 
         self.widgets = []
-        # Window settings
-        # self.grid(row=row, column=0, sticky='we')
-        # self._column_setup()
+
         
         # Timer vars
         self.paused = BooleanVar(value=True)
@@ -60,9 +58,9 @@ class Timer:
         self.category_options.config(width=10)
         self.category_options.bind()
 
-        self.timer_label = Label(self.frame, textvariable=self.timer_str, justify='right', anchor='center',width=10)
+        self.timer_label = Label(self.frame, textvariable=self.timer_str, style='Timer.TLabel',font=('Arial', 24, "bold"),  anchor='center',width=10)
         self.start_btn   = Button(self.frame, textvariable=self.button_text, command=self.start_timer)
-        self.delete_btn  = Button(self.frame, text='X', width=2, command=self.view.remove_timer)
+        self.delete_btn  = Button(self.frame, text='X', width=2, command=lambda: self.view.remove_timer(self), style='Red.TButton')
 
         # Grid the widgets
         self.grid_widgets(self.row)
@@ -86,6 +84,7 @@ class Timer:
         # Set the timer to the productive time
         self.seconds_left    = self.productive_time
         self.color = category['color']
+        self.timer_label.configure(style=f'Timer.{self.color}.TLabel')
         self.category.set(event)
 
     def start_timer(self):

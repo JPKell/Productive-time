@@ -1,4 +1,4 @@
-from tkinter.ttk import Frame, Button
+from tkinter.ttk import Button
 
 
 class Header:

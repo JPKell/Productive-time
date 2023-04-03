@@ -1,15 +1,20 @@
-import sqlite3
+import sqlite3, pathlib, os
 from datetime import datetime
 
 # Todo
 # - Create a categories table
 # - create a timer history table
 
-
+def relative_to_abs_path(rel_path:str) -> str:
+    ''' Returns the absolute path of a relative path. '''
+    current_dir = pathlib.Path(__file__).parent.resolve() # current directory
+    return os.path.join(current_dir, rel_path) 
 
 class Db:
     def __init__(self):
-        self.conn = sqlite3.connect('timer.db')
+
+
+        self.conn = sqlite3.connect(relative_to_abs_path('timer.db'))
         self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
         self._build_db()

@@ -28,17 +28,13 @@ class Lights(Frame):
         row2.columnconfigure(1, weight=1)
         row2.columnconfigure(2, weight=1)
         row2.columnconfigure(3, weight=1)
-        row2.columnconfigure(4, weight=1)
-        row2.columnconfigure(5, weight=1)
-        row2.columnconfigure(6, weight=1)
-        row2.columnconfigure(7, weight=1)
 
         common = { 'width': 4}
 
         # Row 1
-        dim_btn = Button(row1, text="Dim", command=lambda: self._set_light_mode('dim'), **common)
-        slow_btn = Button(row1, text="Slow", command=lambda: self._set_light_mode('slow'), **common)
-        fast_btn = Button(row1, text="Fast", command=lambda: self._set_light_mode('fast'), **common)
+        dim_btn  = Button(row1, text="Dim",    command=lambda: self._set_light_mode('dim'), **common)
+        slow_btn = Button(row1, text="Slow",   command=lambda: self._set_light_mode('slow'), **common)
+        fast_btn = Button(row1, text="Fast",   command=lambda: self._set_light_mode('fast'), **common)
         none_btn = Button(row1, text="Strobe", command=lambda: self._set_light_mode('strobe'), **common)
 
         btn_grid = {'sticky': 'we', 'padx': 2, 'pady': 3}
@@ -48,23 +44,23 @@ class Lights(Frame):
         none_btn.grid(row=0, column=3, **btn_grid)
 
         # Row 2
-        red_btn    = Button(row2, text="Red",    command=lambda: self._set_light_color('red'), **common)
-        yellow_btn = Button(row2, text="Yellow", command=lambda: self._set_light_color('yellow'), **common)
-        green_btn  = Button(row2, text="Green",  command=lambda: self._set_light_color('green'), **common)
-        cyan_btn   = Button(row2, text="Cyan",   command=lambda: self._set_light_color('cyan'), **common)
-        blue_btn   = Button(row2, text="Blue",   command=lambda: self._set_light_color('blue'), **common)
-        purple_btn = Button(row2, text="Purple", command=lambda: self._set_light_color('purple'), **common)
-        white_btn  = Button(row2, text="White",  command=lambda: self._set_light_color('white'), **common)
-        black_btn  = Button(row2, text="Off",    command=lambda: self._set_light_color('noColor'), **common)
+        red_btn    = Button(row2, text="Red",    style='Red.TButton', command=lambda: self._set_light_color('red'), **common)
+        yellow_btn = Button(row2, text="Yellow", style='Yellow.TButton', command=lambda: self._set_light_color('yellow'), **common)
+        green_btn  = Button(row2, text="Green",  style='Green.TButton', command=lambda: self._set_light_color('green'), **common)
+        cyan_btn   = Button(row2, text="Cyan",   style='Cyan.TButton', command=lambda: self._set_light_color('cyan'), **common)
+        blue_btn   = Button(row2, text="Blue",   style='Blue.TButton', command=lambda: self._set_light_color('blue'), **common)
+        purple_btn = Button(row2, text="Purple", style='Purple.TButton', command=lambda: self._set_light_color('purple'), **common)
+        white_btn  = Button(row2, text="White",  style='White.TButton', command=lambda: self._set_light_color('white'), **common)
+        black_btn  = Button(row2, text="Off",    style='Black.TButton', command=lambda: self._set_light_color('noColor'), **common)
 
         red_btn.grid(row=0, column=0, **btn_grid)
         yellow_btn.grid(row=0, column=1, **btn_grid)
         green_btn.grid(row=0, column=2, **btn_grid)
         cyan_btn.grid(row=0, column=3, **btn_grid)
-        blue_btn.grid(row=0, column=4, **btn_grid)
-        purple_btn.grid(row=0, column=5, **btn_grid)
-        white_btn.grid(row=0, column=6, **btn_grid)
-        black_btn.grid(row=0, column=7, **btn_grid)
+        blue_btn.grid(row=1, column=0, **btn_grid)
+        purple_btn.grid(row=1, column=1, **btn_grid)
+        white_btn.grid(row=1, column=2, **btn_grid)
+        black_btn.grid(row=1, column=3, **btn_grid)
 
 
     def _set_light_color(self, color:str):
