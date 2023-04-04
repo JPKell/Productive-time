@@ -473,8 +473,8 @@ namespace eval ttk::theme::forest-dark {
                 focus $I(spin-button-down-focus) \
             ] -border 4 -sticky nsew
 
-        ttk::style element create Spinbox.symuparrow image $I(up) -width 15 -sticky {}
-        ttk::style element create Spinbox.symdownarrow image $I(down) -width 17 -sticky {}
+        ttk::style element create Spinbox.symuparrow image $I(up) -width 3 -sticky {}
+        ttk::style element create Spinbox.symdownarrow image $I(down) -width 4 -sticky {}
 
         # Sizegrip
         ttk::style element create Sizegrip.sizegrip image $I(sizegrip) \

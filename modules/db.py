@@ -1,35 +1,41 @@
-import sqlite3, pathlib, os
-from datetime import datetime
+from   datetime import datetime
+import sqlite3
+# Local imports
+from   settings import relative_path
 
-# Todo
-# - Create a categories table
-# - create a timer history table
-
-def relative_to_abs_path(rel_path:str) -> str:
-    ''' Returns the absolute path of a relative path. '''
-    current_dir = pathlib.Path(__file__).parent.resolve() # current directory
-    return os.path.join(current_dir, rel_path) 
 
 class Db:
+    ''' Stores the categories and timer records in an SQLite database '''
     def __init__(self):
-
-
-        self.conn = sqlite3.connect(relative_to_abs_path('timer.db'))
+        self.conn = sqlite3.connect(relative_path('data','timer.db'))
+        # Return rows as dictionaries
         self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
         self._build_db()
-
 
     def __del__(self):
         ''' Clean up after ourselves on exit '''
         self.conn.close()
 
-    def _build_db(self):
+    def _build_db(self) -> None:
         ''' Create the timer tables if they don't exist '''
-        self._create_table('categories', 'name TEXT, color TEXT, duration INTEGER, rest INTEGER, active INTEGER, UNIQUE(name)')
-        self._create_table('timers', 'id INTEGER PRIMARY KEY, start_time TEXT, last_event TEXT, duration INTEGER, rest INTEGER, category TEXT, complete INTEGER')
-        self._create_table('events', 'timer_id INTEGER, event TEXT, time TEXT, FOREIGN KEY(timer_id) REFERENCES timers(id)')
+        # Build the columns for each table
+        categories = '''
+            name TEXT PRIMARY KEY, color TEXT, duration INTEGER, rest INTEGER, active INTEGER
+        '''
+        timers = '''
+            id INTEGER PRIMARY KEY, start_time TEXT, last_event TEXT, duration INTEGER, rest INTEGER, category TEXT, complete INTEGER
+        '''
+        events = '''
+            timer_id INTEGER, event TEXT, time TEXT, FOREIGN KEY(timer_id) REFERENCES timers(id)
+        '''
 
+        # Create the tables if they don't exist
+        self._create_table('categories', categories)
+        self._create_table('timers', timers)
+        self._create_table('events', events)
+
+        # Check for categories and create defaults if there are none
         res = self.query("SELECT * FROM categories")
         if not res:
             # Create a default category if there are none
@@ -46,7 +52,7 @@ class Db:
 
     def _create_table(self, table_name, fields):
         ''' Creates a table if it doesn't exist'''
-        sql = "CREATE TABLE IF NOT EXISTS {} ({})".format(table_name, fields)
+        sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({fields})"
         self.cursor.execute(sql)
         self.conn.commit()
 
@@ -57,10 +63,10 @@ class Db:
         active = 1 if active else 0
 
         # Check for an existing category
-        sql = f"""SELECT * FROM categories WHERE name = "{name}" """
+        sql = f'SELECT * FROM categories WHERE name = "{name}"'
         self.cursor.execute(sql)
         if self.cursor.fetchone():
-            sql = f"""UPDATE categories SET color = "{color}", duration = {duration}, rest = {rest} active = {active} WHERE name = "{name}" """
+            sql = f"""UPDATE categories SET color = "{color}", duration = {duration}, rest = {rest}, active = {active} WHERE name = "{name}" """
         else:
             sql = f"""INSERT INTO categories (name, color, duration, rest, active) VALUES ("{name}", "{color}", {duration}, {rest}, {active})"""
         self.cursor.execute(sql)
@@ -75,35 +81,33 @@ class Db:
     
     def get_active_categories(self) -> list:
         ''' Get all active categories from the database '''
-        sql = "SELECT * FROM categories WHERE active = 1"
+        sql = 'SELECT * FROM categories WHERE active = 1 '
         self.cursor.execute(sql)
         res = [ dict(x) for x in self.cursor.fetchall()]
         return res
     
     def get_category(self, name:str) -> dict:
         ''' Get a category from the database '''
-        sql = f"""SELECT * FROM categories WHERE name = "{name}" """
+        sql = f'SELECT * FROM categories WHERE name = "{name}" '
         self.cursor.execute(sql)
         res = self.cursor.fetchone()
         if res:
             return dict(res)
         else:
             return None
-
     
     def delete_category(self, name:str) -> None:
         ''' Delete a category from the database '''
-        sql = f"""DELETE FROM categories WHERE name = "{name}" """
+        sql = f'UPDATE categories SET active = 0 WHERE name = "{name}" '
         self.cursor.execute(sql)
         self.conn.commit()
         
-
     ## Timers
     def add_timer(self, category:str) -> int:
         ''' Add a timer to the database, duration is in seconds.
             Returns the id of the new timer '''
         start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        sql = f"""INSERT INTO timers (start_time, category, complete) VALUES ( "{start_time}", "{category}" , 0)"""
+        sql = f'INSERT INTO timers (start_time, category, complete) VALUES ( "{start_time}", "{category}" , 0)'
         self.cursor.execute(sql)
         self.conn.commit()
 
@@ -135,4 +139,20 @@ class Db:
         self.cursor.execute(sql)
         self.conn.commit()
 
+    def get_timer_report(self, period:str) -> dict:
+        ''' Get a dict to generate a report of all timers in a period '''
+        if period == 'all':
+            sql = f"""SELECT * FROM timers"""
+        else:
+            sql = f"""SELECT * FROM timers WHERE start_time > date('now', '-{period} days')"""
+        self.cursor.execute(sql)
+        # Convert the results to a list of dicts
+        res = [ dict(x) for x in self.cursor.fetchall()]
 
+        # Dictionary to hold the report has each category as a key and a list of timers as the value
+        report = {}
+        categories = self.get_all_categories()
+        for cat in categories:
+            report[cat['name']] = [ d for d in res if d['category'] == cat['name'] ]
+
+        return report
