@@ -140,20 +140,27 @@ class Controller:
     ###
     # Wrap database methods
     ###
-    def upsert_category(self, form:dict):
-        self.db.upsert_category(**form)
+    def upsert_category(self, form:dict) -> int:
+        return self.db.upsert_category(**form)
 
     def get_category_list(self):
         return self.db.get_all_categories()
     
+    def get_root_category_list(self):
+        return self.db.get_root_categories()
+
     def get_category(self, name:str):
         return self.db.get_category(name)
 
-    def delete_category(self, name:str):
-        self.db.delete_category(name)
+    def get_parent_category(self, id:int):
+        return self.db.get_parent_category(id)
+
+    def delete_category(self, id:int):
+        self.db.delete_category(id)
 
     def insert_timer(self, category:str) -> int:
-        id = self.db.add_timer(category)
+        cat = self.db.get_category(category)
+        id = self.db.add_timer(cat['id'])
         return id
     
     def update_timer(self, id:int, duration:int=None, rest:int=None):
@@ -167,6 +174,9 @@ class Controller:
 
     def finish_timer(self, id:int):
         self.db.finish_timer(id)
+
+    def get_chained_timers(self, id:int):
+        return self.db.get_chained_timers(id)
 
     def get_timer_report(self, period:str):
         return self.db.get_timer_report(period)

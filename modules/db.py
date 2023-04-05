@@ -21,10 +21,10 @@ class Db:
         ''' Create the timer tables if they don't exist '''
         # Build the columns for each table
         categories = '''
-            name TEXT PRIMARY KEY, color TEXT, duration INTEGER, rest INTEGER, active INTEGER
+            id INTEGER PRIMARY KEY, parent_id INTEGER, sort INTEGER, name TEXT, color TEXT, duration INTEGER, active INTEGER
         '''
         timers = '''
-            id INTEGER PRIMARY KEY, start_time TEXT, last_event TEXT, duration INTEGER, rest INTEGER, category TEXT, complete INTEGER
+            id INTEGER PRIMARY KEY, category_id INTEGER, start_time TEXT, last_event TEXT, duration INTEGER, complete INTEGER
         '''
         events = '''
             timer_id INTEGER, event TEXT, time TEXT, FOREIGN KEY(timer_id) REFERENCES timers(id)
@@ -39,8 +39,9 @@ class Db:
         res = self.query("SELECT * FROM categories")
         if not res:
             # Create a default category if there are none
-            self.upsert_category('Stopwatch', 'green', 0, 0, True)
-            self.upsert_category('Pomodoro', 'red', 25*60, 5*60, True)
+            self.upsert_category('Stopwatch', 'purple', 0, True)
+            self.upsert_category('Pomodoro', 'red', 25*60, True)
+            self.upsert_category('Rest', 'green', 5*60, True, parent_id=2, sort=1)
 
     ## SQL basics 
     def query(self, sql:str) -> list:
@@ -57,24 +58,36 @@ class Db:
         self.conn.commit()
 
     ## Categories
-    def upsert_category(self, name:str, color:str, duration:int, rest:int, active:bool):
+    def upsert_category(self, name:str, color:str, duration:int, active:bool=True, id:int=None, parent_id:int=None, sort:int=None):
         ''' Updates or inserts a category to the database '''
         # SQLite doesn't have a boolean type, so we convert it to an integer
         active = 1 if active else 0
+        if parent_id == None:
+            parent_id = "NULL"
 
-        # Check for an existing category
-        sql = f'SELECT * FROM categories WHERE name = "{name}"'
-        self.cursor.execute(sql)
-        if self.cursor.fetchone():
-            sql = f"""UPDATE categories SET color = "{color}", duration = {duration}, rest = {rest}, active = {active} WHERE name = "{name}" """
+        if id != None:
+            if sort != None:
+                sort = f'sort={sort},'
+            sql = f"""UPDATE categories SET name = "{name}", color = "{color}", duration = {duration}, {sort} active = {active} WHERE id = "{id}" """
         else:
-            sql = f"""INSERT INTO categories (name, color, duration, rest, active) VALUES ("{name}", "{color}", {duration}, {rest}, {active})"""
+            if sort == None:
+                sort = 0
+            sql = f"""INSERT INTO categories (parent_id, sort, name, color, duration, active) VALUES ({parent_id}, {sort},"{name}", "{color}", {duration},  {active})"""
         self.cursor.execute(sql)
         self.conn.commit()
+
+        return self.cursor.lastrowid
 
     def get_all_categories(self) -> list:
         ''' Get all categories from the database '''
         sql = "SELECT * FROM categories"
+        self.cursor.execute(sql)
+        res = [ dict(x) for x in self.cursor.fetchall()]
+        return res
+    
+    def get_root_categories(self) -> list:
+        ''' Get all categories from the database '''
+        sql = "SELECT * FROM categories WHERE parent_id IS NULL"
         self.cursor.execute(sql)
         res = [ dict(x) for x in self.cursor.fetchall()]
         return res
@@ -96,18 +109,41 @@ class Db:
         else:
             return None
     
-    def delete_category(self, name:str) -> None:
+    def get_parent_category(self, id:int) -> dict:
+        ''' Get a category from the database '''
+        sql = f'SELECT * FROM categories WHERE id = "{id}" '
+        self.cursor.execute(sql)
+        res = self.cursor.fetchone()
+        if res:
+            return dict(res)
+        else:
+            return None
+
+    def deactivate_category(self, id:int) -> None:
         ''' Delete a category from the database '''
-        sql = f'UPDATE categories SET active = 0 WHERE name = "{name}" '
+        sql = f'UPDATE categories SET active = 0 WHERE id = {id} '
+        self.cursor.execute(sql)
+        self.conn.commit()
+
+    def delete_category(self, id:int) -> None:
+        ''' Delete a category and children from the database '''
+        sql = f'DELETE FROM categories WHERE id = {id} OR parent_id = {id} '
         self.cursor.execute(sql)
         self.conn.commit()
         
+    def get_chained_timers(self, id:int) -> list:
+        ''' Get all categories from the database '''
+        sql = f"SELECT * FROM categories WHERE parent_id = {id} ORDER BY sort"
+        self.cursor.execute(sql)
+        res = [ dict(x) for x in self.cursor.fetchall()]
+        return res
+
     ## Timers
-    def add_timer(self, category:str) -> int:
+    def add_timer(self, category_id:int) -> int:
         ''' Add a timer to the database, duration is in seconds.
             Returns the id of the new timer '''
         start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        sql = f'INSERT INTO timers (start_time, category, complete) VALUES ( "{start_time}", "{category}" , 0)'
+        sql = f'INSERT INTO timers (start_time, category_id, complete) VALUES ( "{start_time}", "{category_id}" , 0)'
         self.cursor.execute(sql)
         self.conn.commit()
 
@@ -144,7 +180,7 @@ class Db:
         if period == 'all':
             sql = f"""SELECT * FROM timers"""
         else:
-            sql = f"""SELECT * FROM timers WHERE start_time > date('now', '-{period} days')"""
+            sql = f"""SELECT t.* FROM timers t JOIN categories c ON t.category_id = c.id WHERE start_time > date('now', '-{period} days')"""
         self.cursor.execute(sql)
         # Convert the results to a list of dicts
         res = [ dict(x) for x in self.cursor.fetchall()]

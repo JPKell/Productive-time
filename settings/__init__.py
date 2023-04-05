@@ -5,6 +5,9 @@ from .looks import Looks
 
 colors = ['red','green','yellow','blue','purple','cyan','white','noColor']
 
+chained_timer_name = 'Stage'
+
+
 def relative_path(*rel_path:str) -> str:
     ''' Returns the absolute path of a relative path. 
         - rel_path: a list of strings representing the relative path

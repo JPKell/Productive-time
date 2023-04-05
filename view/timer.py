@@ -12,19 +12,17 @@ class Timer:
         self.id = 0
         # Flags         
         self.started  = False
-        self.on_break = False
         self.exit     = False
         # Tk vars
         self.paused      = BooleanVar(value=True)
         self.category    = StringVar()
-        self.timer_str   = StringVar()
+        self.timer_str   = StringVar(value='00:00')
         self.button_text = StringVar(value='Start')
         # Timer class vars
         self.color = 'green'
-        self.seconds_left = 0
-        self.productive_time = 0
-        self.rest_time = 0
         self._time = 0 
+        self.target_time = 0
+        self.timer_chain = []
 
         self._build_ui()
 
@@ -48,7 +46,7 @@ class Timer:
     def _build_ui(self):
         ''' Builds a new timer widget '''
         # Set up the widgets
-        category_list = [ x['name'] for x in self.controller.get_category_list()]
+        category_list = [ x['name'] for x in self.controller.get_root_category_list()]
         category_list.insert(0, 'Stopwatch')
         self.category_options = OptionMenu(self.frame, self.category, *category_list, command=self._category_selected)
         self.category_options.config(width=10)
@@ -70,14 +68,29 @@ class Timer:
         self.start_btn.grid(row=row, column=7, columnspan=2,**btn_settings)
         self.delete_btn.grid(row=row, column=9,  **btn_settings)
 
+    def _reset_to_parent_timer(self):
+        ''' Resets the timer to the parent timer '''
+        category = self.controller.get_parent_category(self.parent_id)
+        self.category.set(category['name'])
+        self.seconds_left = category['duration']
+        self.target_time  = category['duration']
+        self.color = category['color']
+        self.timer_label.configure(style=f'Timer.{self.color}.TLabel')
+        self.chained_timers = self.controller.get_chained_timers(category['id'])
+
+
     def _category_selected(self, event):
         ''' Category selected '''
         category = self.controller.get_category(event)
-        # Set the productive time and the rest time
-        self.productive_time = category['duration']
-        self.rest_time       = category['rest']
-        # Set the timer to the productive time
-        self.seconds_left    = self.productive_time
+        
+        # This is selected from the input so it will be a parent
+        self.parent_id = category['id']
+
+        self.chained_timers = self.controller.get_chained_timers(category['id'])
+        # Set the timer
+        self.seconds_left = category['duration']
+        self.target_time  = category['duration']
+        # Set up the color
         self.color = category['color']
         self.timer_label.configure(style=f'Timer.{self.color}.TLabel')
         self.category.set(event)
@@ -101,7 +114,7 @@ class Timer:
                 self.controller.muteme.on = True
 
             # Start the timer
-            if self.productive_time == 0:
+            if self.seconds_left == 0:
                 self._stopwatch_tick()
             else:
                 self._timer_tick()
@@ -118,29 +131,20 @@ class Timer:
             # Set the label and variables
             self.button_text.set('Resume')
             self.paused = True
+            # Absolut for stopwatch cause it counts up. 
+            duration = abs(self.target_time - self.seconds_left)
             # Update db
             self.controller.add_event(self.id, 'pause')
-            if self.on_break:
-                duration = self.rest_time - self.seconds_left
-                self.controller.update_timer(self.id, rest=duration)
-            else:
-                # Absolut for stopwatch cause it counts up. 
-                duration = abs(self.productive_time - self.seconds_left)
-                self.controller.update_timer(self.id, duration=duration)
+            self.controller.update_timer(self.id, duration=duration)
             # Set the light to dim
             self.controller.muteme_mode = 'dim'
 
     def delete_timer(self):
         ''' Deletes the timer and updates db'''
         if self.started:
+            duration = abs(self.target_time - self.seconds_left)
             self.controller.add_event(self.id, 'delete')
-            if self.on_break:
-                duration = self.rest_time - self.seconds_left
-                self.controller.update_timer(self.id, rest=duration)
-            else:
-                # Absolut for stopwatch cause it counts up. 
-                duration = abs(self.productive_time - self.seconds_left)
-                self.controller.update_timer(self.id, duration=duration)
+            self.controller.update_timer(self.id, duration=duration)
         self._destroy()
 
     def _stopwatch_tick(self):
@@ -167,47 +171,50 @@ class Timer:
         elif self.seconds_left == 3:
             self.controller.muteme_mode = 'strobe'
         elif self.seconds_left == 0:
-
-            ... # Set back to previous light 
+            self.controller.muteme_mode = '' 
 
         # Check if the timer is pause and throw it back on the loop
         if self.paused and self.seconds_left > 0:
             self.view.after(1000, self._timer_tick)
         
         elif self.seconds_left > 0:
-            color = 'green' if self.on_break else self.color
-            self.controller.muteme_color = color
+            self.controller.muteme_color = self.color
             self.seconds_left = self.seconds_left - 1
             self.view.after(1000, self._timer_tick)
         
-        # 0 Seconds left on timer
-        elif not self.on_break:
-            self.on_break = True
-            # MuteMe color
-            self.controller.muteme_color = 'green'
-            self.controller.muteme_mode = ''
-            # Timer color
-            self.timer_label.configure(style='green.TLabel')
-            
-            self.seconds_left = self.rest_time
-
-            self.controller.add_event(self.id, 'break')
-            self.controller.update_timer(self.id, duration=self.productive_time)
+        elif len(self.chained_timers) > 0:
+            new_timer = self.chained_timers.pop(0)
+            self.category.set(new_timer['name'])
+                    # Set the timer
+            self.seconds_left = new_timer['duration']
+            self.target_time  = new_timer['duration']
+            # Set up the color
+            self.color = new_timer['color']
+            self.timer_label.configure(style=f'Timer.{self.color}.TLabel')
+            self.controller.muteme_color = self.color
+            # Update db
+            self.controller.add_event(self.id, 'end')
+            self.controller.update_timer(self.id, duration=self.target_time)
+            self.controller.finish_timer(self.id)
             self.view.after(1000, self._timer_tick)
+
         else:
             # Reset the timer back
-            self.seconds_left = self.productive_time
-            self.on_break = False
+            self.seconds_left = self.target_time
             self.started  = False
+            self.button_text.set('Start')
             # Reset the label color
             self.timer_label.configure(style=f'Timer.{self.color}.TLabel')
             # Update db
             self.controller.add_event(self.id, 'end')
-            self.controller.update_timer(self.id, rest=self.rest_time)
+            self.controller.update_timer(self.id, duration=self.target_time)
             self.controller.finish_timer(self.id)
             # Turn off light
             self.controller.muteme_color = 'noColor'
             self.controller.muteme_mode  = ''
+
+            # Reset the timer
+            self._reset_to_parent_timer()
 
     def _destroy(self):
         ''' Destroy the timer items ''' 
