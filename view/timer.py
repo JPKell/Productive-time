@@ -183,6 +183,11 @@ class Timer:
             self.view.after(1000, self._timer_tick)
         
         elif len(self.chained_timers) > 0:
+            # Mark the timer as finished
+            self.controller.add_event(self.id, 'end')
+            self.controller.update_timer(self.id, duration=self.target_time)
+            self.controller.finish_timer(self.id)
+        
             new_timer = self.chained_timers.pop(0)
             self.category.set(new_timer['name'])
                     # Set the timer
@@ -192,10 +197,10 @@ class Timer:
             self.color = new_timer['color']
             self.timer_label.configure(style=f'Timer.{self.color}.TLabel')
             self.controller.muteme_color = self.color
-            # Update db
-            self.controller.add_event(self.id, 'end')
-            self.controller.update_timer(self.id, duration=self.target_time)
-            self.controller.finish_timer(self.id)
+
+            # Create new timer db entry
+            self.id = self.controller.insert_timer(self.category.get())
+            self.controller.add_event(self.id, 'start')
             self.view.after(1000, self._timer_tick)
 
         else:

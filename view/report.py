@@ -35,15 +35,15 @@ class Report(Frame):
         all_btn.grid(   row=0, column=3, sticky='we', padx=5, pady=5)
         export_btn.grid(row=0, column=4, sticky='we', padx=5, pady=5)
 
-        self.report_tree = Treeview(row1, columns=('duration', 'rest', 'complete'))
+        self.report_tree = Treeview(row1, columns=('name', 'duration', 'complete'))
         self.report_tree.heading('#0', text='')
+        self.report_tree.heading('name', text='Name')
         self.report_tree.heading('duration', text='Duration')
-        self.report_tree.heading('rest', text='Rest')
         self.report_tree.heading('complete', text='Complete')
 
         self.report_tree.column('#0', width=100)
+        self.report_tree.column('name', width=50, anchor='c')
         self.report_tree.column('duration', width=50, anchor='c')
-        self.report_tree.column('rest', width=50, anchor='c')
         self.report_tree.column('complete', width=20, anchor='c')
 
         self.report_tree.grid(row=1, column=0, columnspan=5, sticky='we', padx=5, pady=5)
@@ -58,23 +58,21 @@ class Report(Frame):
         for category, report in report_dict.items():
             # Calculate total duration and rest
             tot_duration = sum([record['duration'] for record in report if record['duration'] is not None])
-            tot_rest = sum([record['rest'] for record in report if record['rest'] is not None])
+
             # Format the duration and rest
             tot_duration = f"{tot_duration//3600:02}:{(tot_duration % 3600) // 60:02}:{tot_duration % 60:02}"
-            tot_rest = f"{tot_rest//3600:02}:{(tot_rest % 3600) // 60:02}:{tot_rest % 60:02}"
 
             tot_complete = sum([ record['complete'] for record in report ])
 
-            self.report_tree.insert('', 'end', category, text=category, values=(tot_duration, tot_rest, tot_complete))
+            self.report_tree.insert('', 'end', category, text=category, values=('', tot_duration, tot_complete))
             for record in report:
                 # Handle null values
                 duration = record['duration'] if record['duration'] is not None else 0
-                rest = record['rest'] if record['rest'] is not None else 0
+
                 # Format the duration and rest
                 duration = f"{duration//3600:02}:{(duration % 3600) // 60:02}:{duration % 60:02}"
-                rest = f"{rest//3600:02}:{(rest % 3600) // 60:02}:{rest % 60:02}"
 
-                self.report_tree.insert(category, 'end', text=record['start_time'][:10], values=(duration, rest, record['complete']))
+                self.report_tree.insert(category, 'end', text=record['start_time'][10:], values=(record['cat_name'],duration, record['complete']))
 
     def select_range(self, int:str) -> None:
         ''' Selects the report range '''

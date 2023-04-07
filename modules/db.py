@@ -175,20 +175,68 @@ class Db:
         self.cursor.execute(sql)
         self.conn.commit()
 
-    def get_timer_report(self, period:str) -> dict:
+    def get_timer_report_by_category(self, period:str) -> dict:
         ''' Get a dict to generate a report of all timers in a period '''
         if period == 'all':
-            sql = f"""SELECT * FROM timers"""
+            sql = f"""
+                SELECT 
+                    t.*, 
+                    c.name as cat_name, 
+                    c2.name as parent_name 
+                FROM timers t 
+                JOIN categories c ON t.category_id = c.id 
+                LEFT JOIN categories c2 ON c.parent_id = c2.id   """
         else:
-            sql = f"""SELECT t.* FROM timers t JOIN categories c ON t.category_id = c.id WHERE start_time > date('now', '-{period} days')"""
+            sql = f"""
+                SELECT 
+                    t.*, 
+                    c.name as cat_name, 
+                    c2.name as parent_name 
+                FROM timers t 
+                JOIN categories c ON t.category_id = c.id 
+                LEFT JOIN categories c2 ON c.parent_id = c2.id
+                WHERE start_time > date('now', '-{period} days')"""
         self.cursor.execute(sql)
         # Convert the results to a list of dicts
-        res = [ dict(x) for x in self.cursor.fetchall()]
+        res = [ dict(x) for x in self.cursor.fetchall() ]
 
         # Dictionary to hold the report has each category as a key and a list of timers as the value
         report = {}
         categories = self.get_all_categories()
         for cat in categories:
-            report[cat['name']] = [ d for d in res if d['category'] == cat['name'] ]
+            report[cat['name']] = [ d for d in res if d['category_id'] == cat['id'] ]
+
+        return report
+
+    def get_timer_report_by_date(self, period:str) -> dict:
+        ''' Get a dict to generate a report of all timers in a period '''
+        if period == 'all':
+            sql = f"""
+                SELECT 
+                    t.*, 
+                    c.name as cat_name, 
+                    c2.name as parent_name 
+                FROM timers t 
+                JOIN categories c ON t.category_id = c.id 
+                LEFT JOIN categories c2 ON c.parent_id = c2.id   """
+        else:
+            sql = f"""
+                SELECT 
+                    t.*, 
+                    c.name as cat_name, 
+                    c2.name as parent_name 
+                FROM timers t 
+                JOIN categories c ON t.category_id = c.id 
+                LEFT JOIN categories c2 ON c.parent_id = c2.id
+                WHERE start_time > date('now', '-{period} days')"""
+        self.cursor.execute(sql)
+        # Convert the results to a list of dicts
+        res = [ dict(x) for x in self.cursor.fetchall() ]
+
+        # Dictionary to hold the report has each category as a key and a list of timers as the value
+        report = {}
+        dates = list(set([ d['start_time'][:10] for d in res ]))
+        for date in dates:
+            report[date] = [ d for d in res if d['start_time'][:10] == date ]
 
         return report

@@ -179,7 +179,8 @@ class Controller:
         return self.db.get_chained_timers(id)
 
     def get_timer_report(self, period:str):
-        return self.db.get_timer_report(period)
+        # Could also have it by category, the db call is there, but not sure which is better
+        return self.db.get_timer_report_by_date(period)
 
     def add_event(self, timer_id:int, event:str):
         self.db.add_event(timer_id, event)
