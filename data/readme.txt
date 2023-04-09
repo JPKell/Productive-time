@@ -1,0 +1,1 @@
+This folder to house the db which gets created at first launch
